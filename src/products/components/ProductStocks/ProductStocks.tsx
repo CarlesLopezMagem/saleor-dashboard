@@ -130,6 +130,8 @@ const useStyles = makeStyles(
     popper: {
       marginTop: theme.spacing(1),
       zIndex: 2,
+      maxHeight: 400,
+      overflow: "scroll",
     },
     quantityContainer: {
       paddingTop: theme.spacing(),
@@ -165,6 +167,15 @@ const useStyles = makeStyles(
     thresholdInput: {
       maxWidth: 400,
     },
+    addRow: {
+      "&:hover": {
+        cursor: "pointer",
+        "& $actionableText": {
+          color: theme.palette.primary.main,
+        },
+      },
+    },
+    actionableText: {},
     preorderItemsLeftCount: {
       fontSize: 14,
       paddingTop: theme.spacing(2),
@@ -200,9 +211,10 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
   onWarehouseStockDelete,
   onWarehouseConfigure,
 }) => {
-  const classes = useStyles({});
+  const classes = useStyles();
   const intl = useIntl();
   const anchor = React.useRef<HTMLDivElement>();
+  const [lastStockRowFocus, setLastStockRowFocus] = React.useState(false);
   const [isExpanded, setExpansionState] = React.useState(false);
   const unitsLeft = parseInt(data.globalThreshold, 10) - data.globalSoldUnits;
 
@@ -215,6 +227,18 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
   const onThresholdChange = createNonNegativeValueChangeHandler(
     onFormDataChange,
   );
+
+  const handleWarehouseStockAdd = (warehouseId: string) => {
+    onWarehouseStockAdd(warehouseId);
+    setLastStockRowFocus(true);
+  };
+
+  const handleStockInputFocus = (input: HTMLDivElement) => {
+    if (lastStockRowFocus && input) {
+      input.focus();
+      setLastStockRowFocus(false);
+    }
+  };
 
   return (
     <Card>
@@ -374,7 +398,7 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
             </TableRow>
           </TableHead>
           <TableBody>
-            {renderCollection(stocks, stock => {
+            {renderCollection(stocks, (stock, index) => {
               const handleQuantityChange = createNonNegativeValueChangeHandler(
                 event => onChange(stock.id, event.target.value),
               );
@@ -399,6 +423,10 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
                       }}
                       onChange={handleQuantityChange}
                       value={stock.value}
+                      inputRef={input =>
+                        stocks.length === index + 1 &&
+                        handleStockInputFocus(input)
+                      }
                     />
                   </TableCell>
                   <TableCell className={classes.colAction}>
@@ -414,26 +442,27 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
               );
             })}
             {warehousesToAssign.length > 0 && (
-              <TableRow>
-                <TableCell colSpan={3}>
-                  <Typography variant="body2">
-                    <FormattedMessage
-                      id="cBHRxx"
-                      defaultMessage="Assign Warehouse"
-                      description="button"
-                    />
-                  </Typography>
-                </TableCell>
-                <TableCell className={classes.colAction}>
-                  <ClickAwayListener
-                    onClickAway={() => setExpansionState(false)}
-                  >
+              <ClickAwayListener onClickAway={() => setExpansionState(false)}>
+                <TableRow
+                  className={classes.addRow}
+                  onClick={() => setExpansionState(!isExpanded)}
+                >
+                  <TableCell colSpan={3} className={classes.actionableText}>
+                    <Typography variant="body2">
+                      <FormattedMessage
+                        id="cBHRxx"
+                        defaultMessage="Assign Warehouse"
+                        description="button"
+                      />
+                    </Typography>
+                  </TableCell>
+                  <TableCell className={classes.colAction}>
                     <div ref={anchor}>
                       <IconButton
                         data-test-id="add-warehouse"
                         color="primary"
                         variant="secondary"
-                        onClick={() => setExpansionState(!isExpanded)}
+                        className={classes.actionableText}
                       >
                         <PlusIcon />
                       </IconButton>
@@ -456,7 +485,7 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
                                 <MenuItem
                                   className={classes.menuItem}
                                   onClick={() =>
-                                    onWarehouseStockAdd(warehouse.id)
+                                    handleWarehouseStockAdd(warehouse.id)
                                   }
                                 >
                                   {warehouse.name}
@@ -467,9 +496,9 @@ const ProductStocks: React.FC<ProductStocksProps> = ({
                         )}
                       </Popper>
                     </div>
-                  </ClickAwayListener>
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                </TableRow>
+              </ClickAwayListener>
             )}
           </TableBody>
         </Table>
